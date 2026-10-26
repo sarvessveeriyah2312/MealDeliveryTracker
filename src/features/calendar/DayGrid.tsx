@@ -11,6 +11,8 @@ export function DayGrid(props: {
   today: string
   meals: Meal[]
   selected: Set<string>
+  /** Day open in the desktop side panel. */
+  shownDay?: string | null
   onTap: (date: string) => void
   onLongPress: (date: string) => void
 }) {
@@ -48,6 +50,7 @@ export function DayGrid(props: {
           const lunch = meals.find((m) => m.meal_type === 'lunch')
           const dinner = meals.find((m) => m.meal_type === 'dinner')
           const isSelected = props.selected.has(date)
+          const isShown = props.shownDay === date
           const isToday = date === props.today
           const off = meals.length > 0 && meals.every((m) => m.status === 'no_service')
           return (
@@ -63,7 +66,7 @@ export function DayGrid(props: {
                 props.onTap(date)
               }}
               className={`flex aspect-square min-h-11 flex-col items-center justify-center gap-1 rounded-xl text-sm font-medium tabular transition-colors select-none ${
-                isSelected ? 'bg-brand text-white dark:text-bg' : off ? 'text-muted line-through decoration-muted/50' : meals.length ? 'hover:bg-surface-2' : 'text-muted/45'
+                isSelected ? 'bg-brand text-white dark:text-bg' : isShown ? 'bg-brand-soft text-brand-strong' : off ? 'text-muted line-through decoration-muted/50' : meals.length ? 'hover:bg-surface-2' : 'text-muted/45'
               } ${isToday && !isSelected ? 'ring-[1.5px] ring-fg' : ''}`}
               aria-label={`${date}${isSelected ? ', selected' : ''}`}
             >

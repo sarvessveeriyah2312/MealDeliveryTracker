@@ -14,8 +14,9 @@ import { statusPatch, useUpdateMeals } from '@/hooks/mutations'
 import { useOffDays } from '@/hooks/queries'
 import { useCurrentSubscription } from '@/hooks/useCurrentSubscription'
 import { useMonthData, useMonthsWithCurrent } from '@/hooks/useMonthData'
-import { projectNextMonth, unmarkedPastMeals } from '@/lib/billing'
-import { STATUS_LABELS, type MealStatus } from '@/lib/constants'
+import { mealCredit, projectNextMonth, unmarkedPastMeals } from '@/lib/billing'
+import { billingMeal } from '@/api/adapters'
+import { MEAL_LABELS, STATUS_LABELS, type MealStatus } from '@/lib/constants'
 import { formatDay, formatPeriod } from '@/lib/dates'
 import { formatRM } from '@/lib/money'
 import { CloseMonthSheet } from './CloseMonthSheet'
@@ -56,6 +57,7 @@ function MonthSummary({ month, months, today, onSelect }: { month: Month; months
   const [busy, setBusy] = useState(false)
   const [removing, setRemoving] = useState<Payment | null>(null)
   const [editingFee, setEditingFee] = useState<string | null>(null)
+  const [filter, setFilter] = useState<MealStatus | null>(null)
 
   if (data.isLoading || !data.statement) return <Page title="Summary"><Loading /></Page>
   if (data.error) return <Page title="Summary"><ErrorBox error={data.error} /></Page>
@@ -103,136 +105,173 @@ function MonthSummary({ month, months, today, onSelect }: { month: Month; months
   const markMany = (ids: string[], status: MealStatus) => update.mutate({ ids, patch: statusPatch(status) }, { onError: (e) => toast(e.message, { tone: 'error' }) })
 
   const total = STATUS_ORDER.reduce((n, k) => n + st.counts[k], 0)
+  const filtered = filter
+    ? data.meals.filter((m) => m.status === filter).map((meal) => ({ meal, credit: data.ctx ? mealCredit(billingMeal(meal), data.ctx) : 0 }))
+    : []
 
   return (
-    <Page title="Summary" eyebrow={sub.vendor_name}>
+    <Page title="Summary">
       <MonthSwitcher months={months} value={month} onChange={onSelect} />
 
-      <section className="card">
-        <div className="ledger-row">
-          <span className="text-muted">Monthly fee</span>
-          <span aria-hidden className="ledger-leader" />
-          {editingFee === null ? (
-            <button className="inline-flex items-center gap-1.5 tabular disabled:cursor-default" disabled={!isOpen} onClick={() => setEditingFee(String(month.fee_snapshot))}>
-              {formatRM(st.base_fee)}
-              {isOpen && <Pencil className="h-3.5 w-3.5 text-muted" aria-label="Edit fee" />}
-            </button>
-          ) : (
-            <span className="flex items-center gap-2">
-              <input aria-label="Fee for this month" type="number" step="0.01" inputMode="decimal" className="input min-h-10 w-28 text-right" value={editingFee} onChange={(e) => setEditingFee(e.target.value)} />
-              <button className="btn-primary min-h-10 px-3" disabled={busy || editingFee === '' || Number(editingFee) < 0} onClick={saveFee}>
-                Save
-              </button>
-            </span>
-          )}
-        </div>
-        <MoneyRow label="Credit from last month" amount={st.opening_credit} />
-        <MoneyRow label="Credit used" amount={st.credit_applied} sign="−" />
-        <MoneyRow label="Amount due" amount={st.amount_due} total />
-        <MoneyRow label="Paid" amount={st.paid} />
-        {st.outstanding > 0 ? (
-          <MoneyRow label="Still to pay" amount={st.outstanding} strong tone="bad" />
-        ) : (
-          <LedgerRow label="Still to pay" value="Nothing" tone="good" />
-        )}
-
-        <div className="mt-4">
-          <MoneyRow label="Credit earned this month" amount={st.earned_credit} hint={`${st.billable} billable meals at ${formatRM(st.derived_meal_value)} each`} />
-          {st.overpayment > 0 && <MoneyRow label="Overpaid, kept as credit" amount={st.overpayment} />}
-          <MoneyRow label={isOpen ? 'Credit to carry, so far' : 'Credit carried forward'} amount={isOpen ? st.closing_credit : Number(month.closing_credit ?? 0)} total tone="good" />
-        </div>
-        {isOpen && (
-          <p className="mt-3 text-sm text-muted">
-            Next month you'll pay <strong className="text-fg tabular">{formatRM(next.amount_due)}</strong>: the {formatRM(Number(sub.monthly_fee))} fee less {formatRM(next.credit_applied)} credit.
-          </p>
-        )}
-      </section>
-
-      <section className="card space-y-3">
-        <h2 className="section-title">Meals</h2>
-        <div className="flex h-3 overflow-hidden rounded-full bg-surface-2" role="img" aria-label={STATUS_ORDER.map((k) => `${STATUS_LABELS[k]} ${st.counts[k]}`).join(', ')}>
-          {STATUS_ORDER.map((k) =>
-            st.counts[k] ? <span key={k} className={STATUS_BAR[k]} style={{ width: `${(st.counts[k] / Math.max(total, 1)) * 100}%` }} /> : null,
-          )}
-        </div>
-        <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-          {STATUS_ORDER.map((k) => (
-            <li key={k} className="flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${STATUS_BAR[k]}`} />
-              <span className="flex-1 text-muted">{STATUS_LABELS[k]}</span>
-              <span className="font-semibold tabular">{st.counts[k]}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="card">
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="section-title">Payments</h2>
-          <button className="btn-ghost min-h-10 px-3 text-sm text-brand" onClick={() => setPaying(true)}>
-            <Plus className="h-4 w-4" /> Add payment
-          </button>
-        </div>
-        {data.payments.length === 0 ? (
-          <p className="py-2 text-sm text-muted">No payments yet. Add one when you pay {sub.vendor_name}.</p>
-        ) : (
-          <ul className="divide-y divide-line">
-            {data.payments.map((p) => (
-              <li key={p.id} className="flex items-center gap-3 py-2">
-                <span className="min-w-0 flex-1 text-sm">
-                  <span className="block font-medium">
-                    {formatDay(p.paid_on, 'd MMM')}, {METHOD_LABELS[p.method]}
-                  </span>
-                  {p.note && <span className="block truncate text-xs text-muted">{p.note}</span>}
+      <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
+        <div className="space-y-4">
+          <section className="card">
+            <div className="ledger-row">
+              <span className="text-muted">Monthly fee</span>
+              <span aria-hidden className="ledger-leader" />
+              {editingFee === null ? (
+                <button className="inline-flex items-center gap-1.5 tabular disabled:cursor-default" disabled={!isOpen} onClick={() => setEditingFee(String(month.fee_snapshot))}>
+                  {formatRM(st.base_fee)}
+                  {isOpen && <Pencil className="h-3.5 w-3.5 text-muted" aria-label="Edit fee" />}
+                </button>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <input aria-label="Fee for this month" type="number" step="0.01" inputMode="decimal" className="input min-h-10 w-28 text-right" value={editingFee} onChange={(e) => setEditingFee(e.target.value)} />
+                  <button className="btn-primary min-h-10 px-3" disabled={busy || editingFee === '' || Number(editingFee) < 0} onClick={saveFee}>
+                    Save
+                  </button>
                 </span>
-                <span className="font-semibold tabular">{formatRM(Number(p.amount))}</span>
-                <button className="icon-btn -mr-2" aria-label="Delete payment" onClick={() => setRemoving(p)}>
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+              )}
+            </div>
+            <MoneyRow label="Credit from last month" amount={st.opening_credit} />
+            <MoneyRow label="Credit used" amount={st.credit_applied} sign="−" />
+            <MoneyRow label="Amount due" amount={st.amount_due} total />
+            <MoneyRow label="Paid" amount={st.paid} />
+            {st.outstanding > 0 ? (
+              <MoneyRow label="Still to pay" amount={st.outstanding} strong tone="bad" />
+            ) : (
+              <LedgerRow label="Still to pay" value="Nothing" tone="good" />
+            )}
 
-      {isOpen ? (
-        <div className="space-y-2">
-          <button className="btn-primary min-h-14 w-full" disabled={earlierOpen || busy} onClick={() => setClosing(true)}>
-            <Lock className="h-5 w-5" /> Close {formatPeriod(month.period)}
-          </button>
-          {earlierOpen && <p className="text-center text-xs text-muted">Close earlier months first.</p>}
+            <div className="mt-4">
+              <MoneyRow label="Credit earned this month" amount={st.earned_credit} hint={`${st.billable} billable meals at ${formatRM(st.derived_meal_value)} each`} />
+              {st.overpayment > 0 && <MoneyRow label="Overpaid, kept as credit" amount={st.overpayment} />}
+              <MoneyRow label={isOpen ? 'Credit to carry, so far' : 'Credit carried forward'} amount={isOpen ? st.closing_credit : Number(month.closing_credit ?? 0)} total tone="good" />
+            </div>
+            {isOpen && (
+              <p className="mt-3 text-sm text-muted">
+                Next month you'll pay <strong className="text-fg tabular">{formatRM(next.amount_due)}</strong>: the {formatRM(Number(sub.monthly_fee))} fee less {formatRM(next.credit_applied)} credit.
+              </p>
+            )}
+          </section>
+
+          {isOpen ? (
+            <div className="space-y-2">
+              <button className="btn-primary min-h-14 w-full" disabled={earlierOpen || busy} onClick={() => setClosing(true)}>
+                <Lock className="h-5 w-5" /> Close {formatPeriod(month.period)}
+              </button>
+              {earlierOpen && <p className="text-center text-xs text-muted">Close earlier months first.</p>}
+            </div>
+          ) : (
+            <button className="btn-secondary min-h-14 w-full" disabled={busy} onClick={() => setReopening(true)}>
+              <LockOpen className="h-5 w-5" /> Reopen {formatPeriod(month.period)}
+            </button>
+          )}
         </div>
-      ) : (
-        <button className="btn-secondary min-h-14 w-full" disabled={busy} onClick={() => setReopening(true)}>
-          <LockOpen className="h-5 w-5" /> Reopen {formatPeriod(month.period)}
-        </button>
-      )}
 
-      <section className="card">
-        <h2 className="section-title mb-2">Credit history</h2>
-        <ol className="relative space-y-1 before:absolute before:top-5 before:bottom-5 before:left-[1.05rem] before:w-px before:bg-line">
-          {[...months].reverse().map((m) => {
-            const selected = m.id === month.id
-            return (
-              <li key={m.id}>
-                <button
-                  onClick={() => onSelect(m)}
-                  className={`relative flex min-h-12 w-full items-center gap-3 rounded-2xl px-2 text-left text-sm transition ${selected ? 'bg-surface-2' : 'hover:bg-surface-2/60'}`}
-                >
-                  <span className={`z-10 flex h-5 w-5 items-center justify-center rounded-full ring-4 ring-surface ${m.status === 'closed' ? 'bg-muted/30 text-muted' : 'bg-brand text-white'}`}>
-                    {m.status === 'closed' ? <Lock className="h-2.5 w-2.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-white" />}
-                  </span>
-                  <span className={`flex-1 ${selected ? 'font-semibold' : ''}`}>{formatPeriod(m.period)}</span>
-                  <span className="text-xs text-muted tabular">
-                    {formatRM(Number(m.opening_credit))} → <span className="font-semibold text-fg">{m.closing_credit == null ? '…' : formatRM(Number(m.closing_credit))}</span>
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ol>
-        <p className="mt-3 text-xs text-muted">Opening → closing credit. Each closing credit carries into the next month.</p>
-      </section>
+        <div className="space-y-4">
+          <section className="card space-y-3">
+            <h2 className="section-title">Meals</h2>
+            <div className="flex h-3 overflow-hidden rounded-full bg-surface-2" role="img" aria-label={STATUS_ORDER.map((k) => `${STATUS_LABELS[k]} ${st.counts[k]}`).join(', ')}>
+              {STATUS_ORDER.map((k) =>
+                st.counts[k] ? <span key={k} className={STATUS_BAR[k]} style={{ width: `${(st.counts[k] / Math.max(total, 1)) * 100}%` }} /> : null,
+              )}
+            </div>
+            <ul className="grid grid-cols-2 gap-1 text-sm">
+              {STATUS_ORDER.map((k) => (
+                <li key={k}>
+                  <button
+                    aria-pressed={filter === k}
+                    disabled={!st.counts[k]}
+                    onClick={() => setFilter(filter === k ? null : k)}
+                    className={`flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors disabled:opacity-50 ${filter === k ? 'bg-surface-2 ring-1 ring-line' : 'hover:bg-surface-2'}`}
+                  >
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_BAR[k]}`} />
+                    <span className="flex-1 text-muted">{STATUS_LABELS[k]}</span>
+                    <span className="font-semibold tabular">{st.counts[k]}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {filter && (
+              <div className="animate-fade rounded-xl border border-line">
+                <p className="flex items-center justify-between border-b border-line px-3 py-2 text-sm font-semibold">
+                  {STATUS_LABELS[filter]}
+                  <button className="text-xs font-medium text-muted hover:text-fg" onClick={() => setFilter(null)}>
+                    Hide
+                  </button>
+                </p>
+                <ul className="max-h-64 divide-y divide-line overflow-y-auto">
+                  {filtered.map(({ meal, credit }) => (
+                    <li key={meal.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                      <span>
+                        {formatDay(meal.date, 'EEE d MMM')} <span className="text-muted">{MEAL_LABELS[meal.meal_type].toLowerCase()}</span>
+                        {meal.note && <span className="block text-xs text-muted">{meal.note}</span>}
+                      </span>
+                      {credit > 0 && <span className="font-semibold text-delivered tabular">+{formatRM(credit)}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+
+          <section className="card">
+            <div className="mb-1 flex items-center justify-between">
+              <h2 className="section-title">Payments</h2>
+              <button className="btn-ghost min-h-10 px-3 text-sm text-brand" onClick={() => setPaying(true)}>
+                <Plus className="h-4 w-4" /> Add payment
+              </button>
+            </div>
+            {data.payments.length === 0 ? (
+              <p className="py-2 text-sm text-muted">No payments yet. Add one when you pay {sub.vendor_name}.</p>
+            ) : (
+              <ul className="divide-y divide-line">
+                {data.payments.map((p) => (
+                  <li key={p.id} className="flex items-center gap-3 py-2">
+                    <span className="min-w-0 flex-1 text-sm">
+                      <span className="block font-medium">
+                        {formatDay(p.paid_on, 'd MMM')}, {METHOD_LABELS[p.method]}
+                      </span>
+                      {p.note && <span className="block truncate text-xs text-muted">{p.note}</span>}
+                    </span>
+                    <span className="font-semibold tabular">{formatRM(Number(p.amount))}</span>
+                    <button className="icon-btn -mr-2" aria-label="Delete payment" onClick={() => setRemoving(p)}>
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="card">
+            <h2 className="section-title mb-2">Credit history</h2>
+            <ol className="relative space-y-1 before:absolute before:top-5 before:bottom-5 before:left-[1.05rem] before:w-px before:bg-line">
+              {[...months].reverse().map((m) => {
+                const selected = m.id === month.id
+                return (
+                  <li key={m.id}>
+                    <button
+                      onClick={() => onSelect(m)}
+                      className={`relative flex min-h-12 w-full items-center gap-3 rounded-2xl px-2 text-left text-sm transition ${selected ? 'bg-surface-2' : 'hover:bg-surface-2/60'}`}
+                    >
+                      <span className={`z-10 flex h-5 w-5 items-center justify-center rounded-full ring-4 ring-surface ${m.status === 'closed' ? 'bg-muted/30 text-muted' : 'bg-brand text-white'}`}>
+                        {m.status === 'closed' ? <Lock className="h-2.5 w-2.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                      </span>
+                      <span className={`flex-1 ${selected ? 'font-semibold' : ''}`}>{formatPeriod(m.period)}</span>
+                      <span className="text-xs text-muted tabular">
+                        {formatRM(Number(m.opening_credit))} → <span className="font-semibold text-fg">{m.closing_credit == null ? '…' : formatRM(Number(m.closing_credit))}</span>
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ol>
+            <p className="mt-3 text-xs text-muted">Opening → closing credit. Each closing credit carries into the next month.</p>
+          </section>
+        </div>
+      </div>
 
       <PaymentSheet
         open={paying}

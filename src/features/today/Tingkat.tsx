@@ -6,15 +6,16 @@ import { STATUS_SOLID } from '@/components/status'
 import { MEAL_LABELS, MEAL_TIMES, STATUS_LABELS, type MealStatus } from '@/lib/constants'
 import { formatRM } from '@/lib/money'
 
-// Today's meals drawn as a tingkat: a handle carrying the vendor's name, one enamel tier per meal
-// whose rim takes the meal's status colour, and the clips that hold the tiers together.
+// Today's meals drawn as a tingkat: one frame that is the handle across the top and the rails down
+// both sides, the vendor's name as the grip, and one enamel tier per meal with a band in its status
+// colour.
 
-const RIM: Record<MealStatus, string> = {
-  delivered: 'border-t-delivered',
-  vendor_cancelled: 'border-t-vendor',
-  user_cancelled: 'border-t-user',
-  no_service: 'border-t-noservice',
-  scheduled: 'border-t-line',
+const BAND: Record<MealStatus, string> = {
+  delivered: 'bg-delivered',
+  vendor_cancelled: 'bg-vendor',
+  user_cancelled: 'bg-user',
+  no_service: 'bg-noservice',
+  scheduled: 'bg-line',
 }
 
 const STATUS_TEXT: Record<MealStatus, string> = {
@@ -33,25 +34,15 @@ const ACTIONS: { status: MealStatus; label: string; icon: LucideIcon }[] = [
 
 export function Tingkat({ vendorName, children }: { vendorName: string; children: ReactNode }) {
   return (
-    <div className="relative px-1.5 pt-10">
-      <svg aria-hidden viewBox="0 0 240 44" className="absolute top-0 left-1/2 h-11 w-60 -translate-x-1/2 text-line" fill="none">
-        <path d="M24 44V20C24 10 31 4 42 4H198C209 4 216 10 216 20V44" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-      </svg>
-      <p className="absolute top-0 left-1/2 max-w-[11rem] -translate-x-1/2 -translate-y-1/3 truncate rounded-full border border-line bg-bg px-3 py-0.5 text-xs font-semibold">
+    <div className="relative pt-4">
+      {/* Handle and side rails: a single frame, open at the bottom where the stack's foot sits. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-4 bottom-2 rounded-t-[2rem] border-[5px] border-b-0 border-line" />
+      <p className="absolute top-0 left-1/2 z-10 max-w-[70%] -translate-x-1/2 truncate rounded-full bg-fg px-3.5 py-1 text-xs font-semibold text-bg">
         {vendorName}
       </p>
-      <div className="space-y-2">{children}</div>
-      <div aria-hidden className="mx-5 h-2.5 rounded-b-2xl bg-line" />
+      <div className="relative space-y-2 px-3 pt-7">{children}</div>
+      <div aria-hidden className="mx-6 mt-2 h-2 rounded-b-xl bg-line" />
     </div>
-  )
-}
-
-function Clips() {
-  return (
-    <>
-      <span aria-hidden className="absolute top-9 -left-1.5 h-7 w-1.5 rounded-l-md bg-line" />
-      <span aria-hidden className="absolute top-9 -right-1.5 h-7 w-1.5 rounded-r-md bg-line" />
-    </>
   )
 }
 
@@ -72,63 +63,61 @@ export function TingkatTier(props: {
   const MealIcon = meal.meal_type === 'lunch' ? Sun : Moon
 
   return (
-    <section
-      className={`animate-tier relative rounded-[1.25rem] border border-t-[6px] border-line bg-surface p-4 transition-colors ${RIM[meal.status]}`}
-      style={{ animationDelay: `${index * 90}ms` }}
-    >
-      <Clips />
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <MealIcon className="h-5 w-5 text-muted" />
-          <h3 className="text-xl font-semibold tracking-tight">{MEAL_LABELS[meal.meal_type]}</h3>
-          <span className="text-sm text-muted tabular">{MEAL_TIMES[meal.meal_type]}</span>
-        </div>
-        <p className={`flex items-center gap-1 text-sm font-semibold ${STATUS_TEXT[meal.status]}`}>
-          <StatusIcon status={meal.status} />
-          {STATUS_LABELS[meal.status]}
-        </p>
-      </div>
-      {credit > 0 && <p className="mt-1 text-sm font-semibold text-delivered">You're owed {formatRM(credit)} for this meal</p>}
-      {meal.note && <p className="mt-1 text-sm text-muted">{meal.note}</p>}
-
-      {meal.status === 'no_service' ? (
-        <p className="mt-3 flex items-center gap-2 text-sm text-muted">
-          <CalendarOff className="h-4 w-4" /> Off day, nothing to mark.
-        </p>
-      ) : (
-        <>
-          <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-surface-2 p-1" role="group" aria-label={`${MEAL_LABELS[meal.meal_type]} status`}>
-            {ACTIONS.map((a) => {
-              const active = meal.status === a.status
-              return (
-                <button
-                  key={a.status}
-                  disabled={locked}
-                  aria-pressed={active}
-                  onClick={() => (active ? canUnset && onMark('scheduled') : onMark(a.status))}
-                  className={`flex min-h-12 items-center justify-center gap-1.5 rounded-lg border text-[0.8rem] font-semibold transition-colors disabled:opacity-50 ${
-                    active ? STATUS_SOLID[a.status] : 'border-transparent text-fg hover:bg-surface'
-                  }`}
-                >
-                  <a.icon className="h-4 w-4 shrink-0" strokeWidth={2.4} />
-                  {a.label}
-                </button>
-              )
-            })}
+    <section className="animate-tier relative overflow-hidden rounded-2xl border border-line bg-surface" style={{ animationDelay: `${index * 90}ms` }}>
+      <div aria-hidden className={`h-1.5 transition-colors duration-300 ${BAND[meal.status]}`} />
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <MealIcon className="h-5 w-5 text-muted" />
+            <h3 className="text-xl font-semibold tracking-tight">{MEAL_LABELS[meal.meal_type]}</h3>
+            <span className="text-sm text-muted tabular">{MEAL_TIMES[meal.meal_type]}</span>
           </div>
-          {autoDeliver && meal.status === 'scheduled' && !pastDue && (
-            <p className="mt-2 text-xs text-muted">Marked delivered at {MEAL_TIMES[meal.meal_type]} unless you change it.</p>
-          )}
-        </>
-      )}
+          <p className={`flex items-center gap-1 text-sm font-semibold ${STATUS_TEXT[meal.status]}`}>
+            <StatusIcon status={meal.status} />
+            {STATUS_LABELS[meal.status]}
+          </p>
+        </div>
+        {credit > 0 && <p className="mt-1 text-sm font-semibold text-delivered">You're owed {formatRM(credit)} for this meal</p>}
+        {meal.note && <p className="mt-1 text-sm text-muted">{meal.note}</p>}
+
+        {meal.status === 'no_service' ? (
+          <p className="mt-3 flex items-center gap-2 text-sm text-muted">
+            <CalendarOff className="h-4 w-4" /> Off day, nothing to mark.
+          </p>
+        ) : (
+          <>
+            <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-surface-2 p-1" role="group" aria-label={`${MEAL_LABELS[meal.meal_type]} status`}>
+              {ACTIONS.map((a) => {
+                const active = meal.status === a.status
+                return (
+                  <button
+                    key={a.status}
+                    disabled={locked}
+                    aria-pressed={active}
+                    onClick={() => (active ? canUnset && onMark('scheduled') : onMark(a.status))}
+                    className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg border px-1 text-[0.78rem] leading-tight font-semibold transition-colors disabled:opacity-50 sm:min-h-12 sm:flex-row sm:gap-1.5 ${
+                      active ? STATUS_SOLID[a.status] : 'border-transparent text-fg hover:bg-surface'
+                    }`}
+                  >
+                    <a.icon className="h-4 w-4 shrink-0" strokeWidth={2.4} />
+                    {a.label}
+                  </button>
+                )
+              })}
+            </div>
+            {autoDeliver && meal.status === 'scheduled' && !pastDue && (
+              <p className="mt-2 text-xs text-muted">Marked delivered at {MEAL_TIMES[meal.meal_type]} unless you change it.</p>
+            )}
+          </>
+        )}
+      </div>
     </section>
   )
 }
 
 export function EmptyTier({ children }: { children: ReactNode }) {
   return (
-    <section className="animate-tier relative rounded-[1.25rem] border border-dashed border-line bg-surface/60 p-5 text-center text-sm text-muted">
-      <Clips />
+    <section className="animate-tier rounded-2xl border border-dashed border-line bg-surface/70 p-6 text-center text-sm text-muted">
       {children}
     </section>
   )

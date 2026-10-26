@@ -37,17 +37,17 @@ export function SettingsPage() {
       ) : months.error || offDays.error ? (
         <ErrorBox error={months.error ?? offDays.error} />
       ) : (
-        <>
+        <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
           <SubscriptionSettings key={sub.id} sub={sub} months={months.data ?? []} today={today} />
-          <OffDaysManager subscriptionId={sub.id} offDays={offDays.data ?? []} months={months.data ?? []} today={today} />
-        </>
+          <div className="space-y-4 lg:sticky lg:top-6">
+            <OffDaysManager subscriptionId={sub.id} offDays={offDays.data ?? []} months={months.data ?? []} today={today} />
+            <button className="btn-secondary w-full border-dashed" onClick={addVendor}>
+              <Plus className="h-5 w-5" /> Add another vendor
+            </button>
+            <AppearanceAndAccount />
+          </div>
+        </div>
       )}
-
-      <button className="btn-secondary w-full border-dashed" onClick={addVendor}>
-        <Plus className="h-5 w-5" /> Add another vendor
-      </button>
-
-      <AppearanceAndAccount />
     </Page>
   )
 }

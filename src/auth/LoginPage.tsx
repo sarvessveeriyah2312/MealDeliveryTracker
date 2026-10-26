@@ -41,14 +41,16 @@ export function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-6 pt-[calc(2.5rem+env(safe-area-inset-top))] pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-6 pt-[calc(2.5rem+env(safe-area-inset-top))] pb-[calc(2.5rem+env(safe-area-inset-bottom))] lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-center lg:gap-20 lg:py-16">
       <div className="flex flex-1 flex-col justify-center">
         <TingkatMark />
-        <h1 className="mt-10 text-[2.6rem] leading-[1.05] font-bold tracking-tight">Know what your caterer owes you.</h1>
+        <h1 className="mt-10 text-[2.6rem] leading-[1.05] font-bold tracking-tight lg:text-6xl">Know what your caterer owes you.</h1>
         <p className="mt-4 max-w-[30ch] text-base text-muted">Log lunch and dinner, count the meals that never came, and pay the right amount next month.</p>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:rounded-[1.25rem] lg:border lg:border-line lg:bg-surface lg:p-8">
+        <h2 className="hidden text-2xl font-semibold tracking-tight lg:block">Sign in</h2>
+        <p className="mb-2 hidden text-sm text-muted lg:block">Use the Google account you track your meals with.</p>
         {error && (
           <p className="flex items-start gap-2 rounded-xl bg-vendor/10 p-3 text-sm text-vendor">
             <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />

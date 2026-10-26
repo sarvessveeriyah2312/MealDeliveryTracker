@@ -1,19 +1,11 @@
-import { CalendarDays, FileChartColumn, House, Settings, Wallet, type LucideIcon } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
-
-const tabs: { to: string; label: string; icon: LucideIcon }[] = [
-  { to: '/', label: 'Today', icon: House },
-  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { to: '/summary', label: 'Summary', icon: Wallet },
-  { to: '/reports', label: 'Reports', icon: FileChartColumn },
-  { to: '/settings', label: 'Settings', icon: Settings },
-]
+import { NAV_ITEMS } from './navItems'
 
 export function BottomNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-bg/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg">
-      <ul className="mx-auto grid max-w-md grid-cols-5">
-        {tabs.map(({ to, label, icon: Icon }) => (
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-bg/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
+      <ul className="mx-auto grid max-w-2xl grid-cols-5">
+        {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
           <li key={to}>
             <NavLink
               to={to}

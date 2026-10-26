@@ -52,7 +52,7 @@ function ShareMonth({ month, months, onSelect }: { month: Month; months: Month[]
   }
 
   return (
-    <section className="space-y-3 pt-2">
+    <section className="space-y-3">
       <h2 className="section-title">Message for {sub.vendor_name}</h2>
       <MonthSwitcher months={months} value={month} onChange={onSelect} />
       {/* Previewed as the outgoing WhatsApp bubble it will become. */}

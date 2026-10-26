@@ -6,6 +6,7 @@ import { StatusDot } from '@/components/StatusDot'
 import { useToast } from '@/components/Toast'
 import { statusPatch, useUpdateMeals } from '@/hooks/mutations'
 import { useCurrentSubscription } from '@/hooks/useCurrentSubscription'
+import { useIsDesktop } from '@/hooks/useMediaQuery'
 import { useMonthData, useMonthsWithCurrent } from '@/hooks/useMonthData'
 import type { Month } from '@/api/types'
 import { Ban, CalendarRange, CircleCheck, CircleX, ListChecks, Lock, Moon, RotateCcw, Sun, type LucideIcon } from 'lucide-react'
@@ -43,6 +44,7 @@ function CalendarMonth({ month, months, today, onChangeMonth }: { month: Month; 
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkTypes, setBulkTypes] = useState<MealType[]>(['lunch', 'dinner'])
   const locked = month.status === 'closed'
+  const isDesktop = useIsDesktop()
 
   const selectedMeals = useMemo(
     () => data.meals.filter((m) => selected.has(m.date) && bulkTypes.includes(m.meal_type) && m.status !== 'no_service'),
@@ -87,7 +89,37 @@ function CalendarMonth({ month, months, today, onChangeMonth }: { month: Month; 
     )
   }
 
-  const dayMeals = openDay ? data.meals.filter((m) => m.date === openDay) : []
+  // Desktop keeps a day panel beside the grid (defaulting to today); phones open a sheet on tap.
+  const shownDay = isDesktop ? (openDay ?? (today.startsWith(month.period.slice(0, 7)) ? today : null)) : openDay
+  const dayMeals = shownDay ? data.meals.filter((m) => m.date === shownDay) : []
+
+  const dayContent =
+    dayMeals.length === 0 ? (
+      <p className="py-6 text-center text-sm text-muted">No meals scheduled on this day.</p>
+    ) : (
+      <div className="space-y-3">
+        {locked && (
+          <p className="card-flat flex items-center gap-2 text-sm text-muted">
+            <Lock className="h-4 w-4" /> This month is closed. Reopen it from Summary to edit.
+          </p>
+        )}
+        {dayMeals.map((m) => (
+          <MealEditor
+            key={`${m.id}-${m.status}-${m.note}-${m.credit_override}-${m.cancelled_at}`}
+            meal={m}
+            ctx={data.ctx!}
+            locked={locked}
+            autoDeliver={sub.auto_mark_delivered}
+            onSave={(patch) =>
+              update.mutate(
+                { ids: [m.id], patch },
+                { onSuccess: () => toast(`${MEAL_LABELS[m.meal_type]} saved`), onError: (e) => toast(e.message, { tone: 'error' }) },
+              )
+            }
+          />
+        ))}
+      </div>
+    )
 
   return (
     <Page
@@ -105,23 +137,40 @@ function CalendarMonth({ month, months, today, onChangeMonth }: { month: Month; 
       }
     >
       <MonthSwitcher months={months} value={month} onChange={onChangeMonth} />
-      <DayGrid
-        period={month.period}
-        today={today}
-        meals={data.meals}
-        selected={selected}
-        onTap={(d) => (selecting ? toggle(d) : setOpenDay(d))}
-        onLongPress={(d) => {
-          if (locked) return
-          setSelecting(true)
-          toggle(d)
-        }}
-      />
-      <Legend />
-      {!selecting && !locked && <p className="text-center text-xs text-muted">Tap a day to edit it. Long-press to select several days.</p>}
+      <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-6 lg:space-y-0">
+        <div className="space-y-4">
+          <DayGrid
+            period={month.period}
+            today={today}
+            meals={data.meals}
+            selected={selected}
+            shownDay={selecting ? null : shownDay}
+            onTap={(d) => (selecting ? toggle(d) : setOpenDay(d))}
+            onLongPress={(d) => {
+              if (locked) return
+              setSelecting(true)
+              toggle(d)
+            }}
+          />
+          <Legend />
+          {!selecting && !locked && <p className="text-center text-xs text-muted">Tap a day to edit it. Long-press to select several days.</p>}
+        </div>
+        {isDesktop && (
+          <aside className="card lg:sticky lg:top-6">
+            {shownDay ? (
+              <>
+                <h2 className="section-title mb-4 text-xl">{formatDay(shownDay, 'EEEE d MMMM')}</h2>
+                {dayContent}
+              </>
+            ) : (
+              <p className="py-10 text-center text-sm text-muted">Pick a day to see and change its meals.</p>
+            )}
+          </aside>
+        )}
+      </div>
 
       {selecting && (
-        <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-3">
+        <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-3 lg:bottom-6 lg:pl-60">
           <div className="animate-toast mx-auto max-w-md space-y-3 rounded-[1.25rem] border border-line bg-surface p-3 shadow-[var(--shadow-float)]">
             <div className="flex items-center justify-between px-1 text-sm font-semibold">
               <span>
@@ -155,34 +204,11 @@ function CalendarMonth({ month, months, today, onChangeMonth }: { month: Month; 
         </div>
       )}
 
-      <BottomSheet open={!!openDay} onClose={() => setOpenDay(null)} title={openDay ? formatDay(openDay, 'EEEE, d MMMM') : ''}>
-        {dayMeals.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted">No meals scheduled on this day.</p>
-        ) : (
-          <div className="space-y-3">
-            {locked && (
-              <p className="card-flat flex items-center gap-2 text-sm text-muted">
-                <Lock className="h-4 w-4" /> This month is closed. Reopen it from Summary to edit.
-              </p>
-            )}
-            {dayMeals.map((m) => (
-              <MealEditor
-                key={`${m.id}-${m.status}-${m.note}-${m.credit_override}-${m.cancelled_at}`}
-                meal={m}
-                ctx={data.ctx!}
-                locked={locked}
-                autoDeliver={sub.auto_mark_delivered}
-                onSave={(patch) =>
-                  update.mutate(
-                    { ids: [m.id], patch },
-                    { onSuccess: () => toast(`${MEAL_LABELS[m.meal_type]} saved`), onError: (e) => toast(e.message, { tone: 'error' }) },
-                  )
-                }
-              />
-            ))}
-          </div>
-        )}
-      </BottomSheet>
+      {!isDesktop && (
+        <BottomSheet open={!!openDay} onClose={() => setOpenDay(null)} title={openDay ? formatDay(openDay, 'EEEE d MMMM') : ''}>
+          {dayContent}
+        </BottomSheet>
+      )}
     </Page>
   )
 }

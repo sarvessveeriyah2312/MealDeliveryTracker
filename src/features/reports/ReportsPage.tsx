@@ -22,17 +22,19 @@ export function ReportsPage() {
   const { months, current, isLoading, error } = useMonthsWithCurrent(sub.id)
 
   return (
-    <Page title="Reports" eyebrow={sub.vendor_name}>
-      {isLoading ? (
-        <Loading />
-      ) : error ? (
-        <ErrorBox error={error} />
-      ) : months.length === 0 || !current ? (
-        <EmptyState icon={<FileChartColumn className="h-7 w-7" />} title="No months yet" />
-      ) : (
-        <ExportCard key={sub.id} months={months} current={current} />
-      )}
-      <ShareSection />
+    <Page title="Reports">
+      <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
+        {isLoading ? (
+          <Loading />
+        ) : error ? (
+          <ErrorBox error={error} />
+        ) : months.length === 0 || !current ? (
+          <EmptyState icon={<FileChartColumn className="h-7 w-7" />} title="No months yet" />
+        ) : (
+          <ExportCard key={sub.id} months={months} current={current} />
+        )}
+        <ShareSection />
+      </div>
     </Page>
   )
 }
