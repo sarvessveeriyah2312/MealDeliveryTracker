@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Copy, MessageCircle } from 'lucide-react'
 import { MonthSwitcher } from '@/components/MonthSwitcher'
 import { ErrorBox, Loading } from '@/components/Page'
 import { useToast } from '@/components/Toast'
@@ -51,14 +52,19 @@ function ShareMonth({ month, months, onSelect }: { month: Month; months: Month[]
   }
 
   return (
-    <section className="space-y-3">
-      <h2 className="font-semibold">WhatsApp summary</h2>
+    <section className="space-y-3 pt-2">
+      <h2 className="section-title">Message for {sub.vendor_name}</h2>
       <MonthSwitcher months={months} value={month} onChange={onSelect} />
-      <pre className="card overflow-x-auto font-sans text-sm whitespace-pre-wrap select-text">{text}</pre>
+      {/* Previewed as the outgoing WhatsApp bubble it will become. */}
+      <div className="ml-6 rounded-[1.1rem] rounded-tr-sm bg-[#d9fdd3] px-4 py-3 text-[#111b21] dark:bg-[#005c4b] dark:text-[#e9edef]">
+        <pre className="overflow-x-auto font-sans text-sm leading-relaxed whitespace-pre-wrap select-text">{text}</pre>
+      </div>
       <div className="grid grid-cols-2 gap-3">
-        <button className="btn-secondary min-h-14" onClick={copy}>📋 Copy</button>
+        <button className="btn-secondary min-h-14" onClick={copy}>
+          <Copy className="h-5 w-5" /> Copy
+        </button>
         <a className="btn-primary min-h-14" href={waUrl} target="_blank" rel="noreferrer">
-          💬 WhatsApp
+          <MessageCircle className="h-5 w-5" /> WhatsApp
         </a>
       </div>
       {!phone && <p className="text-center text-xs text-muted">Add the vendor's number in Settings to open their chat directly.</p>}

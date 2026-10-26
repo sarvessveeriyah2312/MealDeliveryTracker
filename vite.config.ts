@@ -16,8 +16,8 @@ export default defineConfig({
         name: 'MealTrack',
         short_name: 'MealTrack',
         description: 'Track meal subscription deliveries and credit',
-        theme_color: '#16a34a',
-        background_color: '#ffffff',
+        theme_color: '#2f6b3f',
+        background_color: '#f8f9f7',
         display: 'standalone',
         start_url: '/',
         icons: [

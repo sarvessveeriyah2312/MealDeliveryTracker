@@ -8,6 +8,7 @@ import { statusPatch, useUpdateMeals } from '@/hooks/mutations'
 import { useCurrentSubscription } from '@/hooks/useCurrentSubscription'
 import { useMonthData, useMonthsWithCurrent } from '@/hooks/useMonthData'
 import type { Month } from '@/api/types'
+import { Ban, CalendarRange, CircleCheck, CircleX, ListChecks, Lock, Moon, RotateCcw, Sun, type LucideIcon } from 'lucide-react'
 import { MEAL_LABELS, STATUS_LABELS, type MealStatus, type MealType } from '@/lib/constants'
 import { eachDay, formatDay } from '@/lib/dates'
 import { DayGrid } from './DayGrid'
@@ -25,11 +26,11 @@ export function CalendarPage() {
   return <CalendarMonth key={month.id} month={month} months={months} today={today} onChangeMonth={(m) => setMonthId(m.id)} />
 }
 
-const BULK: { status: MealStatus; label: string }[] = [
-  { status: 'user_cancelled', label: '🙅 I cancelled' },
-  { status: 'vendor_cancelled', label: "❌ Didn't deliver" },
-  { status: 'delivered', label: '✅ Delivered' },
-  { status: 'scheduled', label: '↺ Clear' },
+const BULK: { status: MealStatus; label: string; icon: LucideIcon; tone: string }[] = [
+  { status: 'user_cancelled', label: 'I cancelled', icon: Ban, tone: 'text-user' },
+  { status: 'vendor_cancelled', label: "Not delivered", icon: CircleX, tone: 'text-vendor' },
+  { status: 'delivered', label: 'Delivered', icon: CircleCheck, tone: 'text-delivered' },
+  { status: 'scheduled', label: 'Clear', icon: RotateCcw, tone: 'text-muted' },
 ]
 
 function CalendarMonth({ month, months, today, onChangeMonth }: { month: Month; months: Month[]; today: string; onChangeMonth: (m: Month) => void }) {
@@ -93,8 +94,12 @@ function CalendarMonth({ month, months, today, onChangeMonth }: { month: Month; 
       title="Calendar"
       action={
         !locked && (
-          <button className="btn-secondary" onClick={() => (selecting ? exitSelect() : setSelecting(true))}>
-            {selecting ? 'Done' : 'Select'}
+          <button className={selecting ? 'btn-primary' : 'btn-secondary'} onClick={() => (selecting ? exitSelect() : setSelecting(true))}>
+            {selecting ? 'Done' : (
+              <>
+                <ListChecks className="h-5 w-5" /> Select
+              </>
+            )}
           </button>
         )
       }
@@ -113,17 +118,17 @@ function CalendarMonth({ month, months, today, onChangeMonth }: { month: Month; 
         }}
       />
       <Legend />
-      {!selecting && !locked && <p className="text-center text-xs text-muted">Tap a day to edit · long-press to select several days</p>}
+      {!selecting && !locked && <p className="text-center text-xs text-muted">Tap a day to edit it. Long-press to select several days.</p>}
 
       {selecting && (
-        <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 px-3">
-          <div className="mx-auto max-w-md space-y-2 rounded-2xl border border-line bg-surface p-3 shadow-xl">
-            <div className="flex items-center justify-between text-sm">
+        <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-3">
+          <div className="animate-toast mx-auto max-w-md space-y-3 rounded-[1.25rem] border border-line bg-surface p-3 shadow-[var(--shadow-float)]">
+            <div className="flex items-center justify-between px-1 text-sm font-semibold">
               <span>
-                {selected.size} day{selected.size === 1 ? '' : 's'} · {selectedMeals.length} meals
+                {selected.size} day{selected.size === 1 ? '' : 's'}, {selectedMeals.length} meals
               </span>
-              <button className="min-h-11 px-2 text-brand disabled:opacity-40" disabled={selected.size < 2} onClick={fillRange}>
-                Fill range
+              <button className="btn-ghost min-h-10 px-3 text-brand" disabled={selected.size < 2} onClick={fillRange}>
+                <CalendarRange className="h-4 w-4" /> Fill range
               </button>
             </div>
             <div className="flex gap-2">
@@ -132,16 +137,17 @@ function CalendarMonth({ month, months, today, onChangeMonth }: { month: Month; 
                   key={t}
                   aria-pressed={bulkTypes.includes(t)}
                   onClick={() => setBulkTypes((b) => (b.includes(t) ? b.filter((x) => x !== t) : [...b, t]))}
-                  className={`min-h-11 flex-1 rounded-xl border text-sm ${bulkTypes.includes(t) ? 'border-brand bg-brand/10 font-semibold' : 'border-line'}`}
+                  className={`chip flex-1 ${bulkTypes.includes(t) ? 'chip-on' : ''}`}
                 >
+                  {t === 'lunch' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                   {MEAL_LABELS[t]}
                 </button>
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
               {BULK.map((b) => (
-                <button key={b.status} className="btn-secondary text-sm" disabled={!selectedMeals.length || update.isPending} onClick={() => bulkMark(b.status)}>
-                  {b.label}
+                <button key={b.status} className="btn-secondary min-h-11 text-sm" disabled={!selectedMeals.length || update.isPending} onClick={() => bulkMark(b.status)}>
+                  <b.icon className={`h-4 w-4 ${b.tone}`} /> {b.label}
                 </button>
               ))}
             </div>
@@ -151,10 +157,14 @@ function CalendarMonth({ month, months, today, onChangeMonth }: { month: Month; 
 
       <BottomSheet open={!!openDay} onClose={() => setOpenDay(null)} title={openDay ? formatDay(openDay, 'EEEE, d MMMM') : ''}>
         {dayMeals.length === 0 ? (
-          <p className="text-sm text-muted">No meals scheduled on this day.</p>
+          <p className="py-6 text-center text-sm text-muted">No meals scheduled on this day.</p>
         ) : (
-          <div className="space-y-4">
-            {locked && <p className="text-sm text-muted">🔒 This month is closed. Reopen it from Summary to edit.</p>}
+          <div className="space-y-3">
+            {locked && (
+              <p className="card-flat flex items-center gap-2 text-sm text-muted">
+                <Lock className="h-4 w-4" /> This month is closed. Reopen it from Summary to edit.
+              </p>
+            )}
             {dayMeals.map((m) => (
               <MealEditor
                 key={`${m.id}-${m.status}-${m.note}-${m.credit_override}-${m.cancelled_at}`}
@@ -180,13 +190,15 @@ function CalendarMonth({ month, months, today, onChangeMonth }: { month: Month; 
 function Legend() {
   const items: MealStatus[] = ['delivered', 'vendor_cancelled', 'user_cancelled', 'no_service', 'scheduled']
   return (
-    <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-muted">
-      {items.map((s) => (
-        <span key={s} className="flex items-center gap-1">
-          <StatusDot status={s} /> {STATUS_LABELS[s]}
-        </span>
-      ))}
-      <span>· left dot lunch, right dinner</span>
+    <div className="card-flat space-y-2">
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted">
+        {items.map((s) => (
+          <span key={s} className="flex items-center gap-1.5">
+            <StatusDot status={s} className="h-2 w-2" /> {STATUS_LABELS[s]}
+          </span>
+        ))}
+      </div>
+      <p className="text-[0.7rem] text-muted/80">Left dot is lunch, right dot is dinner.</p>
     </div>
   )
 }

@@ -13,8 +13,8 @@ export function ConfirmDialog(props: {
 }) {
   return (
     <BottomSheet open={props.open} onClose={props.onCancel} title={props.title}>
-      <div className="space-y-3 text-sm">{props.children}</div>
-      <div className="mt-5 grid grid-cols-2 gap-3">
+      <div className="space-y-3 text-sm leading-relaxed text-muted">{props.children}</div>
+      <div className="mt-6 grid grid-cols-2 gap-3">
         <button className="btn-secondary" onClick={props.onCancel} disabled={props.busy}>
           Cancel
         </button>

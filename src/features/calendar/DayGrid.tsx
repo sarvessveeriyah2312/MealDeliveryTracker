@@ -33,10 +33,10 @@ export function DayGrid(props: {
   const cancel = () => clearTimeout(timer.current)
 
   return (
-    <div className="card p-2">
-      <div className="grid grid-cols-7 text-center text-xs text-muted">
+    <div className="card p-3">
+      <div className="mb-1 grid grid-cols-7 text-center text-xs font-medium text-muted">
         {HEADERS.map((h) => (
-          <div key={h} className="py-1">{h}</div>
+          <div key={h} className="py-1.5">{h.slice(0, 2)}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -62,9 +62,9 @@ export function DayGrid(props: {
                 if (longPressed.current) return
                 props.onTap(date)
               }}
-              className={`flex min-h-14 select-none flex-col items-center justify-center gap-1 rounded-xl text-sm ${
-                isSelected ? 'bg-brand text-white' : off ? 'bg-noservice/15 text-muted' : meals.length ? 'bg-bg' : 'text-muted/60'
-              } ${isToday && !isSelected ? 'ring-2 ring-brand' : ''}`}
+              className={`flex aspect-square min-h-11 flex-col items-center justify-center gap-1 rounded-xl text-sm font-medium tabular transition-colors select-none ${
+                isSelected ? 'bg-brand text-white dark:text-bg' : off ? 'text-muted line-through decoration-muted/50' : meals.length ? 'hover:bg-surface-2' : 'text-muted/45'
+              } ${isToday && !isSelected ? 'ring-[1.5px] ring-fg' : ''}`}
               aria-label={`${date}${isSelected ? ', selected' : ''}`}
             >
               <span className={isToday ? 'font-bold' : ''}>{Number(date.slice(8))}</span>

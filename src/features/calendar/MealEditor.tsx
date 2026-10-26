@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { billingMeal } from '@/api/adapters'
 import type { Meal, MealUpdate } from '@/api/types'
-import { STATUS_PILL } from '@/components/status'
+import { StatusIcon } from '@/components/StatusPill'
+import { STATUS_SOLID } from '@/components/status'
 import { isPastDueTime, mealCredit, perMealValue, type PricingContext } from '@/lib/billing'
 import { MEAL_LABELS, STATUS_LABELS, type MealStatus } from '@/lib/constants'
 import { fromLocalInputValue, toLocalInputValue } from '@/lib/dates'
 import { formatRM } from '@/lib/money'
+import { Moon, Sun } from 'lucide-react'
 
 const STATUSES: MealStatus[] = ['delivered', 'vendor_cancelled', 'user_cancelled', 'scheduled', 'no_service']
 
@@ -23,11 +25,12 @@ export function MealEditor({ meal, ctx, locked, autoDeliver, onSave }: { meal: M
     status !== meal.status || note !== (meal.note ?? '') || draft.credit_override !== (meal.credit_override == null ? null : Number(meal.credit_override)) || effectiveCancelledAt !== meal.cancelled_at
 
   return (
-    <section className="space-y-3 border-b border-line pb-4 last:border-0">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold">{MEAL_LABELS[meal.meal_type]}</h3>
-        <span className="text-sm text-muted">
-          worth {formatRM(perMealValue(billingMeal(draft), ctx))} · credit <strong className="text-fg">{formatRM(credit)}</strong>
+    <section className="space-y-4 border-b border-line pb-5 last:border-0">
+      <div className="flex items-baseline gap-2">
+        {meal.meal_type === 'lunch' ? <Sun className="h-4 w-4 self-center text-muted" /> : <Moon className="h-4 w-4 self-center text-muted" />}
+        <h3 className="flex-1 text-lg font-semibold tracking-tight">{MEAL_LABELS[meal.meal_type]}</h3>
+        <span className="text-sm text-muted tabular">
+          worth {formatRM(perMealValue(billingMeal(draft), ctx))}, credit <strong className={credit > 0 ? 'text-delivered' : 'text-fg'}>{formatRM(credit)}</strong>
         </span>
       </div>
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={`${meal.meal_type} status`}>
@@ -38,8 +41,9 @@ export function MealEditor({ meal, ctx, locked, autoDeliver, onSave }: { meal: M
             aria-checked={status === s}
             disabled={locked}
             onClick={() => setStatus(s)}
-            className={`min-h-11 rounded-xl px-3 text-sm ${status === s ? `${STATUS_PILL[s]} font-semibold ring-2 ring-current` : 'border border-line'}`}
+            className={`chip ${status === s ? STATUS_SOLID[s] : ''}`}
           >
+            <StatusIcon status={s} />
             {STATUS_LABELS[s]}
           </button>
         ))}

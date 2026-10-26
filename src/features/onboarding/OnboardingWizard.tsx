@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CalendarDays, HandCoins, Sparkles, Store, type LucideIcon } from 'lucide-react'
 import { useForm, type FieldPath } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
@@ -10,11 +11,11 @@ import { formatPeriod, periodOf, todayLocal } from '@/lib/dates'
 import { formatRM } from '@/lib/money'
 import { PricingFields, ScheduleFields, VendorFields, defaultsFrom, subscriptionSchema, toRow, type SubscriptionFormValues } from '@/features/settings/subscriptionForm'
 
-const STEPS: { title: string; fields: FieldPath<SubscriptionFormValues>[] }[] = [
-  { title: 'Who delivers your meals?', fields: ['vendor_name', 'vendor_phone'] },
-  { title: 'When do they deliver?', fields: ['meal_types', 'delivery_weekdays', 'start_date', 'end_date'] },
-  { title: 'What do you pay?', fields: ['monthly_fee', 'lunch_value', 'dinner_value', 'user_cancel_policy', 'notice_hours'] },
-  { title: 'Open your first month', fields: [] },
+const STEPS: { title: string; icon: LucideIcon; fields: FieldPath<SubscriptionFormValues>[] }[] = [
+  { title: 'Who delivers your meals?', icon: Store, fields: ['vendor_name', 'vendor_phone'] },
+  { title: 'When do they deliver?', icon: CalendarDays, fields: ['meal_types', 'delivery_weekdays', 'start_date', 'end_date'] },
+  { title: 'What do you pay?', icon: HandCoins, fields: ['monthly_fee', 'lunch_value', 'dinner_value', 'user_cancel_policy', 'notice_hours'] },
+  { title: 'Open your first month', icon: Sparkles, fields: [] },
 ]
 
 /** First-run (and "add subscription") flow: creates the subscription and opens its first month. */
@@ -51,19 +52,23 @@ export function OnboardingWizard({ onDone, onCancel }: { onDone: (sub: Subscript
   })
 
   const fieldProps = { register, control, errors: formState.errors }
+  const StepIcon = STEPS[step]!.icon
   return (
     // When opened from Settings it covers the bottom nav so its buttons stay reachable.
     <div className={onCancel ? 'fixed inset-0 z-40 overflow-y-auto bg-bg' : ''}>
       <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <div className="mb-2 flex gap-1" aria-hidden>
           {STEPS.map((_, i) => (
-            <span key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-brand' : 'bg-line'}`} />
+            <span key={i} className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${i <= step ? 'bg-brand' : 'bg-line'}`} />
           ))}
         </div>
         <p className="text-sm text-muted">
           Step {step + 1} of {STEPS.length}
         </p>
-        <h1 className="mt-1 mb-5 text-2xl font-bold">{STEPS[step]!.title}</h1>
+        <h1 className="mt-4 mb-6 flex items-center gap-2.5 text-[1.9rem] leading-tight font-bold tracking-tight">
+          <StepIcon className="h-7 w-7 shrink-0 text-brand" />
+          {STEPS[step]!.title}
+        </h1>
 
         <form className="flex flex-1 flex-col" onSubmit={(e) => e.preventDefault()}>
           <div className="flex-1">
@@ -72,10 +77,10 @@ export function OnboardingWizard({ onDone, onCancel }: { onDone: (sub: Subscript
             {step === 2 && <PricingFields {...fieldProps} />}
             {step === 3 && (
               <div className="space-y-4">
-                <div className="card space-y-1 text-sm">
+                <div className="card-flat space-y-1 text-sm">
                   <p className="font-medium">{values.vendor_name}</p>
                   <p className="text-muted">
-                    First month: {formatPeriod(firstPeriod)} · {formatRM(values.monthly_fee)}/month
+                    First month {formatPeriod(firstPeriod)}, {formatRM(values.monthly_fee)} a month
                   </p>
                 </div>
                 <div className="space-y-1">

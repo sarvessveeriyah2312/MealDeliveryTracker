@@ -89,3 +89,10 @@ export function fromLocalInputValue(value: string): string {
 export function formatInstant(instant: string, pattern = 'd MMM, h:mm a'): string {
   return formatInTimeZone(new Date(instant), TZ, pattern)
 }
+
+export function greetingFor(now: Date = new Date()): string {
+  const hour = Number(formatInTimeZone(now, TZ, 'H'))
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}

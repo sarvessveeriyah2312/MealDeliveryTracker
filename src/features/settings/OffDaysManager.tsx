@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { addOffDay, deleteOffDay, listOffDays } from '@/api/offDays'
 import { syncOffDays } from '@/api/monthOps'
 import type { Month, OffDay } from '@/api/types'
+import { CalendarOff, Plus, X } from 'lucide-react'
+import { SectionHeader } from '@/components/SectionHeader'
 import { useToast } from '@/components/Toast'
 import { keys } from '@/hooks/keys'
 import { formatDay, periodOf } from '@/lib/dates'
@@ -36,12 +38,9 @@ export function OffDaysManager({ subscriptionId, offDays, months, today }: { sub
   }
 
   return (
-    <section className="card space-y-3">
-      <div>
-        <h2 className="font-semibold">Off days</h2>
-        <p className="text-xs text-muted">Meals on these days become "No service" and don't count toward the per-meal value.</p>
-      </div>
-      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+    <section className="card space-y-4">
+      <SectionHeader icon={CalendarOff} title="Off days" description={'Meals on these days become "No service" and don\'t count toward the per-meal value.'} />
+      <div className="grid grid-cols-2 gap-2">
         <input aria-label="Off day date" type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
         <select aria-label="Reason" className="input" value={reason} onChange={(e) => setReason(e.target.value)}>
           {REASONS.map((r) => (
@@ -49,31 +48,32 @@ export function OffDaysManager({ subscriptionId, offDays, months, today }: { sub
           ))}
         </select>
         <button
-          className="btn-primary"
+          className="btn-primary col-span-2"
           disabled={busy || !date || offDays.some((d) => d.date === date)}
           onClick={() => run(() => addOffDay(subscriptionId, date, reason), `${formatDay(date)} marked as off day`)}
         >
-          Add
+          <Plus className="h-5 w-5" /> Add off day
         </button>
       </div>
       {closedPeriods.has(periodOf(date)) && <p className="text-xs text-user">That month is closed — its meals won't change unless you reopen it.</p>}
       {visible.length === 0 ? (
         <p className="text-sm text-muted">No {showPast ? '' : 'upcoming '}off days.</p>
       ) : (
-        <ul className="divide-y divide-line">
+        <ul className="divide-y divide-line rounded-2xl bg-surface-2 px-3">
           {visible.map((d) => (
-            <li key={d.id} className="flex items-center justify-between py-1.5 text-sm">
+            <li key={d.id} className="flex items-center justify-between py-1 text-sm">
               <span>
-                {formatDay(d.date, 'EEE d MMM yyyy')} <span className="text-muted">· {d.reason}</span>
+                <span className="font-medium">{formatDay(d.date, 'EEE d MMM yyyy')}</span>
+                <span className="block text-xs text-muted">{d.reason}</span>
               </span>
-              <button className="min-h-11 min-w-11 text-muted" aria-label={`Remove ${d.date}`} disabled={busy} onClick={() => run(() => deleteOffDay(d.id), 'Off day removed')}>
-                ✕
+              <button className="icon-btn -mr-2" aria-label={`Remove ${d.date}`} disabled={busy} onClick={() => run(() => deleteOffDay(d.id), 'Off day removed')}>
+                <X className="h-4 w-4" />
               </button>
             </li>
           ))}
         </ul>
       )}
-      <button className="text-sm text-brand" onClick={() => setShowPast((v) => !v)}>
+      <button className="btn-ghost min-h-10 px-2 text-sm text-brand" onClick={() => setShowPast((v) => !v)}>
         {showPast ? 'Hide past off days' : 'Show past off days'}
       </button>
     </section>

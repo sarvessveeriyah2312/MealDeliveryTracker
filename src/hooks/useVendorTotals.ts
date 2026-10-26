@@ -17,6 +17,8 @@ export function useVendorTotals(subs: Subscription[], today: string) {
 
   let credit = 0
   let dueNextMonth = 0
+  let delivered = 0
+  let billable = 0
   for (let i = 0; i < subs.length; i++) {
     const sub = subs[i]!
     const month = current[i]
@@ -34,7 +36,9 @@ export function useVendorTotals(subs: Subscription[], today: string) {
       settings: pricingSettings(sub),
     })
     credit += st.closing_credit
+    delivered += st.counts.delivered
+    billable += st.billable
     dueNextMonth += projectNextMonth(st.closing_credit, Number(sub.monthly_fee), sub.carry_forward_enabled).amount_due
   }
-  return { credit, dueNextMonth }
+  return { credit, dueNextMonth, delivered, billable }
 }

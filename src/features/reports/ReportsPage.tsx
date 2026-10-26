@@ -4,7 +4,8 @@ import { billingMeal, pricingSettings } from '@/api/adapters'
 import { listMeals } from '@/api/months'
 import { listPayments } from '@/api/payments'
 import type { Month } from '@/api/types'
-import { ErrorBox, Loading, Page } from '@/components/Page'
+import { EmptyState, ErrorBox, Loading, Page } from '@/components/Page'
+import { FileChartColumn, FileSpreadsheet, FileText, LoaderCircle } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { keys } from '@/hooks/keys'
 import { useCurrentSubscription } from '@/hooks/useCurrentSubscription'
@@ -21,13 +22,13 @@ export function ReportsPage() {
   const { months, current, isLoading, error } = useMonthsWithCurrent(sub.id)
 
   return (
-    <Page title="Reports">
+    <Page title="Reports" eyebrow={sub.vendor_name}>
       {isLoading ? (
         <Loading />
       ) : error ? (
         <ErrorBox error={error} />
       ) : months.length === 0 || !current ? (
-        <p className="card text-sm text-muted">No months yet.</p>
+        <EmptyState icon={<FileChartColumn className="h-7 w-7" />} title="No months yet" />
       ) : (
         <ExportCard key={sub.id} months={months} current={current} />
       )}
@@ -90,10 +91,10 @@ function ExportCard({ months, current }: { months: Month[]; current: Month }) {
   ))
 
   return (
-    <section className="card space-y-3">
+    <section className="card space-y-4">
       <div>
-        <h2 className="font-semibold">Export report</h2>
-        <p className="text-xs text-muted">Every meal day by day, credit per meal, the monthly statement and payments.</p>
+        <h2 className="section-title">Export a report</h2>
+        <p className="text-sm text-muted">Every meal day by day with its credit, the monthly statement and your payments.</p>
       </div>
       <div className="flex gap-2">
         {presets.map((p) => {
@@ -106,7 +107,7 @@ function ExportCard({ months, current }: { months: Month[]; current: Month }) {
                 setFrom(p.from)
                 setTo(p.to)
               }}
-              className={`min-h-11 flex-1 rounded-xl border text-sm ${on ? 'border-brand bg-brand/10 font-semibold' : 'border-line'}`}
+              className={`chip flex-1 ${on ? 'chip-on' : ''}`}
             >
               {p.label}
             </button>
@@ -128,15 +129,28 @@ function ExportCard({ months, current }: { months: Month[]; current: Month }) {
         </label>
       </div>
       <p className="text-xs text-muted">
-        {selected.length} month{selected.length === 1 ? '' : 's'} · {sub.vendor_name}
+        {selected.length} month{selected.length === 1 ? '' : 's'} of {sub.vendor_name}
       </p>
       <div className="grid grid-cols-2 gap-3">
-        <button className="btn-secondary min-h-14" disabled={!!busy || !selected.length} onClick={() => exportReport('xlsx')}>
-          {busy === 'xlsx' ? 'Preparing…' : '📊 Excel'}
-        </button>
-        <button className="btn-secondary min-h-14" disabled={!!busy || !selected.length} onClick={() => exportReport('pdf')}>
-          {busy === 'pdf' ? 'Preparing…' : '📄 PDF'}
-        </button>
+        {(
+          [
+            { format: 'xlsx', label: 'Download Excel', sub: 'Workbook with live formulas', icon: FileSpreadsheet },
+            { format: 'pdf', label: 'Download PDF', sub: 'A4, ready to print', icon: FileText },
+          ] as const
+        ).map((f) => (
+          <button
+            key={f.format}
+            className="flex flex-col items-start gap-2 rounded-xl border border-line p-3.5 text-left transition-colors hover:border-brand disabled:opacity-50"
+            disabled={!!busy || !selected.length}
+            onClick={() => exportReport(f.format)}
+          >
+            {busy === f.format ? <LoaderCircle className="h-6 w-6 animate-spin text-brand" /> : <f.icon className="h-6 w-6 text-brand" />}
+            <span>
+              <span className="block font-semibold">{busy === f.format ? 'Preparing…' : f.label}</span>
+              <span className="block text-xs text-muted">{f.sub}</span>
+            </span>
+          </button>
+        ))}
       </div>
     </section>
   )

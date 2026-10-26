@@ -28,9 +28,9 @@ function Shell() {
   // Today shows every vendor at once; the other screens are per vendor.
   const showSwitcher = useLocation().pathname !== '/'
   return (
-    <div className="mx-auto min-h-dvh max-w-md pt-[env(safe-area-inset-top)] pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
+    <div className="mx-auto min-h-dvh max-w-md pt-[env(safe-area-inset-top)] pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
       {showSwitcher && (
-        <div className="px-4 pt-3">
+        <div className="px-4 pt-4">
           <VendorSwitcher />
         </div>
       )}

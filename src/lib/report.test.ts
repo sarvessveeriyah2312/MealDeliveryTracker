@@ -25,7 +25,7 @@ describe('buildVendorReport', () => {
     const m = report.months[0]!
     expect(m.title).toBe('February 2027')
     expect(m.rows).toHaveLength(40)
-    expect(m.rows[2]).toMatchObject({ date: '2027-02-02', weekday: 'Tue', meal: 'Lunch', statusLabel: "They didn't deliver", value: 15, credit: 15 })
+    expect(m.rows[2]).toMatchObject({ date: '2027-02-02', weekday: 'Tue', meal: 'Lunch', statusLabel: 'Not delivered', value: 15, credit: 15 })
     expect(m.rows[3]).toMatchObject({ meal: 'Dinner', noticeHours: 30, credit: 15, cancelledAt: '1 Feb 2027, 13:00' })
     expect(m.statement.earned_credit).toBe(30)
     expect(m.payments[0]).toMatchObject({ method: 'DuitNow', amount: 600 })

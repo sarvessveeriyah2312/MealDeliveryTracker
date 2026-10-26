@@ -46,16 +46,16 @@ export function CloseMonthSheet(props: {
         ) : (
           <>
             {props.unmarked.length > 0 && (
-              <p className="rounded-xl bg-bg p-3 text-sm">
+              <p className="card-flat text-sm">
                 {props.unmarked.length} unmarked past meal{props.unmarked.length === 1 ? '' : 's'} will be marked as delivered (auto-mark is on).
               </p>
             )}
             {early && (
-              <p className="rounded-xl bg-user/15 p-3 text-sm text-user">
+              <p className="rounded-2xl bg-user/12 p-3 text-sm text-user">
                 {formatPeriod(props.month.period)} isn't over yet. Meals after today stay as they are and won't earn credit unless you reopen.
               </p>
             )}
-            <div className="card">
+            <div className="card-flat">
               <MoneyRow label="Closing credit" amount={closing} strong />
               <MoneyRow label={`Opening credit for ${formatPeriod(addMonths(props.month.period, 1))}`} amount={nextOpeningCredit(closing, props.carryForward)} />
               {props.statement.outstanding > 0 && <MoneyRow label="Still unpaid this month" amount={props.statement.outstanding} />}

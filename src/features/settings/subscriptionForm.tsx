@@ -62,7 +62,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
       type="button"
       aria-pressed={on}
       onClick={onClick}
-      className={`min-h-11 rounded-xl border px-3 text-sm font-medium ${on ? 'border-brand bg-brand text-white' : 'border-line bg-surface'}`}
+      className={`chip px-3 ${on ? 'chip-on' : ''}`}
     >
       {children}
     </button>
@@ -114,7 +114,7 @@ export function ScheduleFields({ register, control, errors }: FieldProps) {
             <div className="grid grid-cols-7 gap-1">
               {[1, 2, 3, 4, 5, 6, 0].map((d) => (
                 <Chip key={d} on={field.value.includes(d)} onClick={() => field.onChange(field.value.includes(d) ? field.value.filter((x) => x !== d) : [...field.value, d])}>
-                  {WEEKDAY_SHORT[d]!.slice(0, 2)}
+                  {WEEKDAY_SHORT[d]!.slice(0, 1)}
                 </Chip>
               ))}
             </div>
@@ -178,14 +178,14 @@ export function PricingFields({ register, errors, control }: FieldProps) {
       </div>
       <label className="flex min-h-11 items-center justify-between gap-3">
         <span className="text-sm">Carry unused credit into next month</span>
-        <input type="checkbox" className="h-6 w-6 accent-brand" {...register('carry_forward_enabled')} />
+        <input type="checkbox" className="toggle" {...register('carry_forward_enabled')} />
       </label>
       <label className="flex min-h-11 items-center justify-between gap-3">
         <span className="text-sm">
           Mark meals as delivered automatically
           <span className="block text-xs text-muted">After lunch 12:00 / dinner 19:00, unless you mark them cancelled.</span>
         </span>
-        <input type="checkbox" className="h-6 w-6 accent-brand" {...register('auto_mark_delivered')} />
+        <input type="checkbox" className="toggle" {...register('auto_mark_delivered')} />
       </label>
     </div>
   )

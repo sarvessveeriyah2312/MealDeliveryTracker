@@ -130,7 +130,7 @@ function addMonthSheet(wb: import('exceljs').Workbook, report: VendorReport, m: 
 
   const c = s.counts
   ws.getCell('A16').value =
-    `Delivered ${c.delivered} · They didn't deliver ${c.vendor_cancelled} · I cancelled ${c.user_cancelled} · No service ${c.no_service} · Not marked ${c.scheduled}`
+    `Delivered ${c.delivered} · Not delivered ${c.vendor_cancelled} · I cancelled ${c.user_cancelled} · No service ${c.no_service} · Not marked ${c.scheduled}`
   ws.getCell('A16').font = { color: { argb: 'FF6B7280' } }
 
   const mealHeaders = ['Date', 'Day', 'Meal', 'Status', 'Cancelled at (MYT)', 'Notice (hours)', 'Meal value', 'Credit', 'Note']

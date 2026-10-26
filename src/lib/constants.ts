@@ -14,7 +14,7 @@ export const MEAL_LABELS: Record<MealType, string> = { lunch: 'Lunch', dinner: '
 export const STATUS_LABELS: Record<MealStatus, string> = {
   scheduled: 'Not marked',
   delivered: 'Delivered',
-  vendor_cancelled: "They didn't deliver",
+  vendor_cancelled: 'Not delivered',
   user_cancelled: 'I cancelled',
   no_service: 'No service',
 }

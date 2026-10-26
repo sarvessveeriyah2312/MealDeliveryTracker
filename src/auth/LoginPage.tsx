@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { CircleAlert, LoaderCircle } from 'lucide-react'
 import { isProviderEnabled, supabase } from '@/lib/supabase'
 import { useAuth } from './AuthProvider'
 
@@ -40,25 +41,47 @@ export function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-end gap-6 px-5 pb-[calc(3rem+env(safe-area-inset-bottom))]">
-      <div>
-        <img src="/icon.svg" alt="" className="mb-4 h-14 w-14" />
-        <h1 className="text-3xl font-bold">MealTrack</h1>
-        <p className="mt-1 text-muted">Log every meal. Know what you're owed.</p>
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-6 pt-[calc(2.5rem+env(safe-area-inset-top))] pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
+      <div className="flex flex-1 flex-col justify-center">
+        <TingkatMark />
+        <h1 className="mt-10 text-[2.6rem] leading-[1.05] font-bold tracking-tight">Know what your caterer owes you.</h1>
+        <p className="mt-4 max-w-[30ch] text-base text-muted">Log lunch and dinner, count the meals that never came, and pay the right amount next month.</p>
       </div>
+
       <div className="flex flex-col gap-3">
-        {error && <p className="rounded-xl bg-vendor/10 p-3 text-sm text-vendor">{error}</p>}
-        <button
-          className="btn min-h-14 w-full border border-line bg-surface text-base"
-          onClick={signIn}
-          disabled={busy}
-        >
-          <GoogleLogo />
-          {busy ? 'Redirecting…' : 'Continue with Google'}
+        {error && (
+          <p className="flex items-start gap-2 rounded-xl bg-vendor/10 p-3 text-sm text-vendor">
+            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+            {error}
+          </p>
+        )}
+        <button className="btn-secondary min-h-14 w-full text-base" onClick={signIn} disabled={busy}>
+          {busy ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <GoogleLogo />}
+          {busy ? 'Opening Google…' : 'Continue with Google'}
         </button>
-        <p className="text-center text-xs text-muted">New here? Signing in creates your account.</p>
+        <p className="text-center text-xs text-muted">Your first sign-in creates your account.</p>
       </div>
     </main>
+  )
+}
+
+/** A three-tier tingkat in the app's status colours; the tiers settle into place on load. */
+function TingkatMark() {
+  const tiers = ['bg-delivered', 'bg-user', 'bg-vendor']
+  return (
+    <div aria-hidden className="relative w-28 pt-7">
+      <svg viewBox="0 0 112 32" className="absolute top-0 left-0 h-8 w-28 text-fg/80" fill="none">
+        <path d="M18 32V14C18 8 22 4 28 4H84C90 4 94 8 94 14V32" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+      </svg>
+      <div className="space-y-1">
+        {tiers.map((tone, i) => (
+          <div key={tone} className="animate-tier relative h-9 overflow-hidden rounded-xl border-2 border-fg/80 bg-surface" style={{ animationDelay: `${i * 110}ms` }}>
+            <div className={`h-2 ${tone}`} />
+          </div>
+        ))}
+      </div>
+      <div className="mx-3 h-2 rounded-b-lg bg-fg/80" />
+    </div>
   )
 }
 

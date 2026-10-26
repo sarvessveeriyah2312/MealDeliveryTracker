@@ -103,7 +103,7 @@ function monthPages(doc: jsPDF, autoTable: AutoTable, report: VendorReport, m: M
   })
 
   const c = s.counts
-  y = muted(doc, `Delivered ${c.delivered}  |  They didn't deliver ${c.vendor_cancelled}  |  I cancelled ${c.user_cancelled}  |  No service ${c.no_service}  |  Not marked ${c.scheduled}`, lastY(doc) + 14)
+  y = muted(doc, `Delivered ${c.delivered}  |  Not delivered ${c.vendor_cancelled}  |  I cancelled ${c.user_cancelled}  |  No service ${c.no_service}  |  Not marked ${c.scheduled}`, lastY(doc) + 14)
 
   autoTable(doc, {
     startY: y + 2,

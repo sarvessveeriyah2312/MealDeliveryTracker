@@ -8,7 +8,9 @@ import { applyRegeneration } from '@/api/monthOps'
 import { listMeals } from '@/api/months'
 import { updateSubscription } from '@/api/subscriptions'
 import type { Meal, Month, Subscription } from '@/api/types'
+import { CalendarDays, HandCoins, LogOut, Monitor, Moon, Palette, Plus, Store, Sun } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { SectionHeader } from '@/components/SectionHeader'
 import { ErrorBox, Loading, Page } from '@/components/Page'
 import { useToast } from '@/components/Toast'
 import { keys } from '@/hooks/keys'
@@ -41,8 +43,8 @@ export function SettingsPage() {
         </>
       )}
 
-      <button className="btn-secondary w-full" onClick={addVendor}>
-        + Add another vendor
+      <button className="btn-secondary w-full border-dashed" onClick={addVendor}>
+        <Plus className="h-5 w-5" /> Add another vendor
       </button>
 
       <AppearanceAndAccount />
@@ -95,25 +97,23 @@ function SubscriptionSettings({ sub, months, today }: { sub: Subscription; month
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
       <section className="card space-y-4">
-        <h2 className="font-semibold">Vendor</h2>
+        <SectionHeader icon={Store} title="Vendor" />
         <VendorFields {...fieldProps} />
       </section>
       <section className="card space-y-4">
-        <h2 className="font-semibold">Schedule</h2>
+        <SectionHeader icon={CalendarDays} title="Schedule" description="Changes apply to future, unmarked meals in open months. Past and marked meals never change." />
         <ScheduleFields {...fieldProps} />
-        <p className="text-xs text-muted">Changes apply to future, unmarked meals in open months. Past and marked meals never change.</p>
       </section>
       <section className="card space-y-4">
-        <h2 className="font-semibold">Pricing & credit</h2>
+        <SectionHeader icon={HandCoins} title="Pricing & credit" description="The monthly fee applies to months opened from now on. To change the current month's fee, tap it on the Summary screen." />
         <PricingFields {...fieldProps} />
-        <p className="text-xs text-muted">The monthly fee applies to months opened from now on. To change the current month's fee, tap it on the Summary screen.</p>
       </section>
-      <label className="card flex min-h-11 items-center justify-between gap-3">
-        <span className="text-sm">
+      <label className="card flex items-center justify-between gap-3">
+        <span className="text-sm font-medium">
           Active vendor
           <span className="block text-xs text-muted">Inactive vendors are hidden from Today and don't open new months.</span>
         </span>
-        <input type="checkbox" className="h-6 w-6 accent-brand" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+        <input type="checkbox" className="toggle" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
       </label>
       <button type="submit" className="btn-primary w-full min-h-14" disabled={busy || formState.isSubmitting || (!formState.isDirty && isActive === sub.is_active)}>
         {busy || formState.isSubmitting ? 'Saving…' : 'Save changes'}
@@ -128,8 +128,8 @@ function SubscriptionSettings({ sub, months, today }: { sub: Subscription; month
         onConfirm={() => pending && persist(pending.values, pending.plans)}
       >
         {pending?.plans.map(({ month, plan }) => (
-          <div key={month.id} className="space-y-1">
-            <p className="font-medium">{formatPeriod(month.period)}</p>
+          <div key={month.id} className="card-flat space-y-1">
+            <p className="font-semibold text-fg">{formatPeriod(month.period)}</p>
             <PlanList label="Added" items={plan.toAdd} />
             <PlanList label="Removed" items={plan.toRemove} />
             <PlanList label="Changed" items={plan.toUpdate.map((u) => ({ ...u.meal, status: u.status }))} />
@@ -162,10 +162,10 @@ function AppearanceAndAccount() {
   const name = profile.data?.full_name ?? (user?.user_metadata.full_name as string | undefined)
   const avatar = profile.data?.avatar_url ?? (user?.user_metadata.avatar_url as string | undefined)
   return (
-    <section className="card space-y-3">
+    <section className="card space-y-4">
+      <SectionHeader icon={Palette} title="Appearance" />
       <div className="space-y-1">
-        <span className="field-label">Appearance</span>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-surface-2 p-1">
           {(['system', 'light', 'dark'] as const).map((t) => (
             <button
               key={t}
@@ -174,24 +174,27 @@ function AppearanceAndAccount() {
                 setTheme(t)
                 setThemeState(t)
               }}
-              className={`min-h-11 rounded-xl border text-sm capitalize ${theme === t ? 'border-brand bg-brand text-white' : 'border-line'}`}
+              className={`flex min-h-11 items-center justify-center gap-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${theme === t ? 'bg-surface text-fg ring-1 ring-line' : 'text-muted'}`}
             >
+              {t === 'system' ? <Monitor className="h-4 w-4" /> : t === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               {t}
             </button>
           ))}
         </div>
       </div>
-      <div className="flex items-center gap-3 border-t border-line pt-3">
+      <div className="flex items-center gap-3 border-t border-line pt-4">
         {avatar ? (
-          <img src={avatar} alt="" referrerPolicy="no-referrer" className="h-10 w-10 shrink-0 rounded-full" />
+          <img src={avatar} alt="" referrerPolicy="no-referrer" className="h-11 w-11 shrink-0 rounded-full" />
         ) : (
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white">{(name ?? user?.email ?? '?')[0]!.toUpperCase()}</span>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-soft font-semibold text-brand-strong">{(name ?? user?.email ?? '?')[0]!.toUpperCase()}</span>
         )}
         <span className="min-w-0 flex-1">
           {name && <span className="block truncate text-sm font-medium">{name}</span>}
           <span className="block truncate text-xs text-muted">{profile.data?.email ?? user?.email}</span>
         </span>
-        <button className="btn-secondary" onClick={signOut}>Sign out</button>
+        <button className="btn-ghost min-h-11 px-3 text-vendor hover:text-vendor" onClick={signOut}>
+          <LogOut className="h-4 w-4" /> Sign out
+        </button>
       </div>
     </section>
   )

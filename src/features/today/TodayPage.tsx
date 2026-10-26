@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { ChevronRight, CircleAlert, Clock, Lock, Plus, Store } from 'lucide-react'
 import { billingMeal } from '@/api/adapters'
 import { openMonth } from '@/api/monthOps'
 import type { Meal, Month, Subscription } from '@/api/types'
+import { useAuth } from '@/auth/AuthProvider'
 import { BottomSheet } from '@/components/BottomSheet'
-import { ErrorBox, Loading, Page } from '@/components/Page'
+import { EmptyState, ErrorBox, Loading, Page } from '@/components/Page'
+import { LedgerRow, MoneyRow } from '@/components/MoneyRow'
 import { useToast } from '@/components/Toast'
 import { UnmarkedMealsList } from '@/components/UnmarkedMealsList'
 import { keys } from '@/hooks/keys'
@@ -13,46 +16,56 @@ import { statusPatch, useUpdateMeals } from '@/hooks/mutations'
 import { useOffDays } from '@/hooks/queries'
 import { useCurrentSubscription } from '@/hooks/useCurrentSubscription'
 import { useMonthData, useMonthsWithCurrent } from '@/hooks/useMonthData'
+import { useProfile } from '@/hooks/useProfile'
 import { useVendorTotals } from '@/hooks/useVendorTotals'
 import { isPastDueTime, mealCredit, nextOpeningCredit, projectNextMonth, unmarkedPastMeals } from '@/lib/billing'
 import { MEAL_LABELS, STATUS_LABELS, type MealStatus } from '@/lib/constants'
-import { addMonths, formatDay, formatPeriod, periodOf, todayLocal } from '@/lib/dates'
-import { formatRM } from '@/lib/money'
-import { MealCard } from './MealCard'
+import { addMonths, formatDay, formatPeriod, greetingFor, periodOf, todayLocal } from '@/lib/dates'
+import { EmptyTier, Tingkat, TingkatTier } from './Tingkat'
+
+function useFirstName(): string | null {
+  const { user } = useAuth()
+  const profile = useProfile()
+  const full = profile.data?.full_name ?? (user?.user_metadata.full_name as string | undefined)
+  return full?.split(' ')[0] ?? null
+}
 
 export function TodayPage() {
   const { subscriptions, addVendor } = useCurrentSubscription()
   const today = todayLocal()
+  const firstName = useFirstName()
   const active = subscriptions.filter((s) => s.is_active)
   const multi = active.length > 1
 
   return (
-    <Page title={formatDay(today, 'EEEE, d MMM')}>
-      {multi && <AllVendorsTotals subs={active} today={today} />}
+    <Page eyebrow={formatDay(today, 'EEEE d MMMM')} title={`${greetingFor()}${firstName ? `, ${firstName}` : ''}`}>
       {active.length === 0 ? (
-        <section className="card space-y-3 text-center">
-          <p>No active vendors.</p>
-          <button className="btn-primary w-full" onClick={addVendor}>+ Add vendor</button>
-        </section>
+        <EmptyState icon={<Store className="h-7 w-7" />} title="No active vendors">
+          <button className="btn-primary mt-3" onClick={addVendor}>
+            <Plus className="h-5 w-5" /> Add vendor
+          </button>
+        </EmptyState>
       ) : (
-        active.map((sub) => <VendorToday key={sub.id} sub={sub} today={today} multi={multi} />)
+        <>
+          {active.map((sub) => (
+            <VendorToday key={sub.id} sub={sub} today={today} multi={multi} />
+          ))}
+          {multi && <AllVendorsLedger subs={active} today={today} />}
+        </>
       )}
     </Page>
   )
 }
 
-function AllVendorsTotals({ subs, today }: { subs: Subscription[]; today: string }) {
+function AllVendorsLedger({ subs, today }: { subs: Subscription[]; today: string }) {
   const totals = useVendorTotals(subs, today)
+  if (!totals) return null
   return (
-    <section className="card grid grid-cols-2 divide-x divide-line">
-      <div className="pr-3">
-        <p className="text-xs text-muted">Credit · all vendors</p>
-        <p className="text-2xl font-bold tabular-nums text-delivered">{totals ? formatRM(totals.credit) : '…'}</p>
-      </div>
-      <div className="pl-3">
-        <p className="text-xs text-muted">Due next month · all</p>
-        <p className="text-2xl font-bold tabular-nums">{totals ? formatRM(totals.dueNextMonth) : '…'}</p>
-      </div>
+    <section className="card">
+      <h2 className="section-title mb-1">All {subs.length} vendors</h2>
+      <MoneyRow label="Owed to you" amount={totals.credit} strong tone="good" />
+      <MoneyRow label="Next month's bills" amount={totals.dueNextMonth} />
+      <LedgerRow label="Delivered this month" value={`${totals.delivered} of ${totals.billable}`} />
     </section>
   )
 }
@@ -60,8 +73,7 @@ function AllVendorsTotals({ subs, today }: { subs: Subscription[]; today: string
 function VendorToday({ sub, today, multi }: { sub: Subscription; today: string; multi: boolean }) {
   const { months, current, isLoading, error } = useMonthsWithCurrent(sub.id)
   return (
-    <div className="space-y-3">
-      {multi && <h2 className="pt-2 text-sm font-semibold tracking-wide text-muted uppercase">{sub.vendor_name}</h2>}
+    <div className="space-y-4">
       {isLoading ? (
         <Loading />
       ) : error ? (
@@ -88,7 +100,8 @@ function TodayForMonth({ sub, month, today, multi }: { sub: Subscription; month:
   const locked = month.status === 'closed'
   const todays = data.meals.filter((m) => m.date === today)
   const unmarked = unmarkedPastMeals(data.meals, today)
-  const next = projectNextMonth(data.statement.closing_credit, Number(sub.monthly_fee), sub.carry_forward_enabled)
+  const st = data.statement
+  const next = projectNextMonth(st.closing_credit, Number(sub.monthly_fee), sub.carry_forward_enabled)
   const ctx = data.ctx
   const label = (meal: Meal) => (multi ? `${sub.vendor_name} ${MEAL_LABELS[meal.meal_type].toLowerCase()}` : MEAL_LABELS[meal.meal_type])
 
@@ -112,71 +125,57 @@ function TodayForMonth({ sub, month, today, multi }: { sub: Subscription; month:
 
   return (
     <>
-      {multi ? (
-        <p className="flex justify-between text-sm text-muted">
-          <span>
-            Credit <span className="font-semibold text-delivered tabular-nums">{formatRM(data.statement.closing_credit)}</span>
-          </span>
-          <span>
-            Next month <span className="font-semibold text-fg tabular-nums">{formatRM(next.amount_due)}</span>
-          </span>
-        </p>
-      ) : (
-        <section className="card grid grid-cols-2 divide-x divide-line">
-          <div className="pr-3">
-            <p className="text-xs text-muted">Credit this month</p>
-            <p className="text-2xl font-bold tabular-nums text-delivered">{formatRM(data.statement.closing_credit)}</p>
-            <p className="text-xs text-muted">earned {formatRM(data.statement.earned_credit)}</p>
-          </div>
-          <div className="pl-3">
-            <p className="text-xs text-muted">Due next month</p>
-            <p className="text-2xl font-bold tabular-nums">{formatRM(next.amount_due)}</p>
-            {data.statement.outstanding > 0 && <p className="text-xs text-vendor">{formatRM(data.statement.outstanding)} unpaid this month</p>}
-          </div>
-        </section>
-      )}
+      <Tingkat vendorName={sub.vendor_name}>
+        {todays.length === 0 ? (
+          <EmptyTier>No delivery on {formatDay(today, 'EEEE')}s.</EmptyTier>
+        ) : (
+          todays.map((m, i) => (
+            <TingkatTier
+              key={m.id}
+              index={i}
+              meal={m}
+              credit={mealCredit(billingMeal(m), ctx)}
+              locked={locked}
+              autoDeliver={sub.auto_mark_delivered}
+              pastDue={isPastDueTime(m, new Date())}
+              onMark={(s) => mark(m, s)}
+            />
+          ))
+        )}
+      </Tingkat>
+
+      <section className="card">
+        <h2 className="section-title mb-1">{formatPeriod(month.period)}</h2>
+        <MoneyRow label="Owed to you" amount={st.closing_credit} strong tone="good" />
+        <MoneyRow label="Next month's bill" amount={next.amount_due} />
+        <LedgerRow label="Delivered so far" value={`${st.counts.delivered} of ${st.billable}`} />
+        {st.outstanding > 0 && <MoneyRow label="Still unpaid this month" amount={st.outstanding} tone="bad" />}
+      </section>
 
       {unmarked.length > 0 && (
-        <button className="card flex w-full items-center justify-between text-left" onClick={() => setResolving(true)}>
-          <span>
-            <span className="font-medium">Unmarked past meals: {unmarked.length}</span>
-            <span className="block text-xs text-muted">Tap to resolve</span>
+        <button className="flex w-full items-center gap-3 rounded-xl bg-user/10 px-4 py-3 text-left text-user" onClick={() => setResolving(true)}>
+          <CircleAlert className="h-5 w-5 shrink-0" />
+          <span className="flex-1 font-semibold">
+            {unmarked.length} past meal{unmarked.length === 1 ? '' : 's'} not marked yet
           </span>
-          <span className="text-muted">›</span>
+          <ChevronRight className="h-5 w-5" />
         </button>
       )}
 
       {locked && (
-        <p className="card text-sm text-muted">
-          🔒 {formatPeriod(month.period)} is closed.{' '}
-          <Link to="/summary" className="text-brand" onClick={() => select(sub.id)}>
-            Reopen it from Summary
-          </Link>{' '}
-          to make changes.
+        <p className="flex items-start gap-2 px-1 text-sm text-muted">
+          <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {formatPeriod(month.period)} is closed.{' '}
+            <Link to="/summary" className="font-semibold text-brand" onClick={() => select(sub.id)}>
+              Reopen it in Summary
+            </Link>{' '}
+            to make changes.
+          </span>
         </p>
       )}
 
-      {todays.length === 0 ? (
-        <section className="card text-center">
-          <p>🍃 No {multi ? '' : 'meals '}delivery today</p>
-          <p className="mt-1 text-sm text-muted">{sub.vendor_name} doesn't deliver on {formatDay(today, 'EEEE')}s.</p>
-        </section>
-      ) : (
-        todays.map((m) => (
-          <MealCard
-            key={m.id}
-            meal={m}
-            title={label(m)}
-            credit={mealCredit(billingMeal(m), ctx)}
-            locked={locked}
-            autoDeliver={sub.auto_mark_delivered}
-            pastDue={isPastDueTime(m, new Date())}
-            onMark={(s) => mark(m, s)}
-          />
-        ))
-      )}
-
-      <BottomSheet open={resolving} onClose={() => setResolving(false)} title={`Unmarked past meals${multi ? ` · ${sub.vendor_name}` : ''}`}>
+      <BottomSheet open={resolving} onClose={() => setResolving(false)} title={multi ? `Unmarked ${sub.vendor_name} meals` : 'Unmarked meals'}>
         <UnmarkedMealsList meals={unmarked} onMark={markMany} disabled={locked} />
       </BottomSheet>
     </>
@@ -194,17 +193,16 @@ function NoMonthForToday({ sub, months, latest, today }: { sub: Subscription; mo
 
   if (sub.start_date > today) {
     return (
-      <div className="card text-center">
-        <p className="text-lg">⏳ Starts {formatDay(sub.start_date, 'd MMMM')}</p>
-        <p className="mt-1 text-sm text-muted">{sub.vendor_name} deliveries begin then.</p>
-      </div>
+      <EmptyState icon={<Clock className="h-7 w-7" />} title={`Starts ${formatDay(sub.start_date, 'd MMMM')}`}>
+        {sub.vendor_name} deliveries begin then.
+      </EmptyState>
     )
   }
 
   if (latest && latest.period < thisPeriod && latest.status === 'open') {
     return (
       <div className="card space-y-3">
-        <p className="font-medium">{formatPeriod(latest.period)} is still open</p>
+        <p className="font-semibold">{formatPeriod(latest.period)} is still open</p>
         <p className="text-sm text-muted">Close it to carry your credit into {formatPeriod(addMonths(latest.period, 1))}.</p>
         <Link to="/summary" className="btn-primary w-full" onClick={() => select(sub.id)}>
           Review & close {formatPeriod(latest.period)}
@@ -228,7 +226,7 @@ function NoMonthForToday({ sub, months, latest, today }: { sub: Subscription; mo
 
   return (
     <div className="card space-y-3">
-      <p className="font-medium">{formatPeriod(thisPeriod)} isn't open yet</p>
+      <p className="font-semibold">{formatPeriod(thisPeriod)} isn't open yet</p>
       <p className="text-sm text-muted">
         {months.length ? 'Your last month is closed but no new month was opened.' : 'Open this month to start tracking meals.'}
       </p>
