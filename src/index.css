@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+/* Dark mode follows the OS by default; `data-theme` on <html> forces a choice. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@theme {
+  --color-brand: #16a34a;
+  --color-surface: #ffffff;
+  --color-bg: #f6f7f6;
+  --color-fg: #111827;
+  --color-muted: #6b7280;
+  --color-line: #e5e7eb;
+  --color-delivered: #16a34a;
+  --color-vendor: #dc2626;
+  --color-user: #d97706;
+  --color-noservice: #9ca3af;
+}
+
+@layer base {
+  :root[data-theme='dark'] {
+    --color-surface: #18181b;
+    --color-bg: #0b0b0d;
+    --color-fg: #f4f4f5;
+    --color-muted: #a1a1aa;
+    --color-line: #2e2e33;
+    --color-brand: #22c55e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --color-surface: #18181b;
+      --color-bg: #0b0b0d;
+      --color-fg: #f4f4f5;
+      --color-muted: #a1a1aa;
+      --color-line: #2e2e33;
+      --color-brand: #22c55e;
+    }
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-bg text-fg antialiased;
+  }
+}
+
+@utility card {
+  @apply rounded-2xl border border-line bg-surface p-4;
+}
+@utility btn {
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 font-medium transition active:scale-[0.98] disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-brand text-white;
+}
+@utility btn-secondary {
+  @apply btn border border-line bg-surface;
+}
+@utility btn-danger {
+  @apply btn bg-vendor text-white;
+}
+@utility input {
+  @apply min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-base outline-none focus:border-brand;
+}
+@utility field-label {
+  @apply text-sm font-medium;
+}
