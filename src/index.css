@@ -67,6 +67,21 @@
   }
   html {
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+  /* App-like touch: no double-tap zoom delay, no text selection or callouts on controls. */
+  button,
+  a,
+  [role='button'],
+  [role='tab'],
+  label {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  img {
+    -webkit-user-drag: none;
   }
   body {
     @apply bg-bg font-sans text-[0.9375rem] leading-normal text-fg antialiased;

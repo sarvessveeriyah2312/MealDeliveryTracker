@@ -17,6 +17,8 @@ export function MonthGlance(props: { period: string; today: string; selected: st
   const { period, today, selected, meals, onSelect } = props
   const lead = (weekdayOf(period) + 6) % 7
   const byKey = new Map(meals.map((m) => [`${m.date}|${m.meal_type}`, m]))
+  const hasLunch = meals.some((m) => m.meal_type === 'lunch')
+  const hasDinner = meals.some((m) => m.meal_type === 'dinner')
 
   return (
     <section className="card">
@@ -56,7 +58,7 @@ export function MonthGlance(props: { period: string; today: string; selected: st
           )
         })}
       </div>
-      <p className="mt-3 text-xs text-muted">Top tier lunch, bottom tier dinner.</p>
+      {hasLunch && hasDinner && <p className="mt-3 text-xs text-muted">Top tier lunch, bottom tier dinner.</p>}
     </section>
   )
 }

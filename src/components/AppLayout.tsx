@@ -27,7 +27,8 @@ export function AppLayout() {
 function Shell() {
   useAutoDeliver(useCurrentSubscription().subscriptions)
   // Today shows every vendor at once; the other screens are per vendor.
-  const showSwitcher = useLocation().pathname !== '/'
+  const { pathname } = useLocation()
+  const showSwitcher = pathname !== '/'
   return (
     <div className="lg:flex">
       <SideNav />
@@ -38,7 +39,10 @@ function Shell() {
               <VendorSwitcher />
             </div>
           )}
-          <Outlet />
+          {/* Fade between tabs so a switch reads as a change of screen. */}
+          <div key={pathname} className="animate-fade">
+            <Outlet />
+          </div>
         </div>
       </div>
       <BottomNav />

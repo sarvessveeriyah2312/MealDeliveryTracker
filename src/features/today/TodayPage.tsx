@@ -7,6 +7,8 @@ import { openMonth } from '@/api/monthOps'
 import type { Meal, Month, Subscription } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { BottomSheet } from '@/components/BottomSheet'
+import { InstallHint } from '@/components/InstallHint'
+import { haptic } from '@/lib/install'
 import { formatRM } from '@/lib/money'
 import { EmptyState, ErrorBox, Loading, Page } from '@/components/Page'
 import { LedgerRow, MoneyRow } from '@/components/MoneyRow'
@@ -42,6 +44,7 @@ export function TodayPage() {
 
   return (
     <Page eyebrow={formatDay(today, 'EEEE d MMMM')} title={`${greetingFor()}${firstName ? `, ${firstName}` : ''}`}>
+      <InstallHint />
       {active.length === 0 ? (
         <EmptyState icon={<Store className="h-7 w-7" />} title="No active vendors">
           <button className="btn-primary mt-3" onClick={addVendor}>
@@ -115,6 +118,7 @@ function TodayForMonth({ sub, month, today, multi }: { sub: Subscription; month:
   const carriedIn = st.opening_credit - st.credit_applied
 
   const mark = (meal: Meal, status: MealStatus) => {
+    haptic()
     const before = { status: meal.status, cancelled_at: meal.cancelled_at }
     update.mutate(
       { ids: [meal.id], patch: statusPatch(status) },
